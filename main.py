@@ -1,5 +1,7 @@
+import sys
+from decimal import Decimal, InvalidOperation
+
 from account import Account
-from decima2l import Decimal
 from transactions import (
     deposit,
     withdraw,
@@ -7,6 +9,11 @@ from transactions import (
     show_transactions,
     show_summary
 )
+
+
+# Make the rupee sign print correctly even on consoles that are not UTF-8 (e.g. Windows)
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
 
 def logged_in_menu(bank):
@@ -35,7 +42,7 @@ def logged_in_menu(bank):
 
                 deposit(account_number, amount)
 
-            except ValueError:
+            except (ValueError, InvalidOperation):
                 print("Please enter a valid amount.")
 
         elif choice == "2":
@@ -45,7 +52,7 @@ def logged_in_menu(bank):
 
                 withdraw(account_number, amount)
 
-            except ValueError:
+            except (ValueError, InvalidOperation):
                 print("Please enter a valid amount.")
 
         elif choice == "3":
@@ -65,7 +72,7 @@ def logged_in_menu(bank):
                     amount
                 )
 
-            except ValueError:
+            except (ValueError, InvalidOperation):
                 print("Please enter valid account number and amount.")
 
         elif choice == "4":

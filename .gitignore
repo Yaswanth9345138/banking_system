@@ -1,0 +1,6 @@
+venv/
+__pycache__/
+*.pyc
+exports/
+bank_app/build/
+bank_app/.dart_tool/

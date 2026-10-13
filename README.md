@@ -1,113 +1,99 @@
-# banking_system
-python project which uses all OOP , class inheritance , IO concepts
+# Banking System
 
+A banking system written in Python (OOP, file I/O, MySQL) with a Flutter front end.
 
-
-# Banking Management System — Authentication & User Account Layer
-
-Python-based authentication and account management module using **MySQL**.
+```
+Flutter app (bank_app/)  --HTTP/JSON-->  api.py  -->  account.py + transactions.py  -->  database.py  -->  MySQL
+Console menu (main.py)  ------------------------------^   (same logic, no web layer)
+```
 
 ## Features
 
-* User registration and login
-* SHA-256 password hashing
-* Email/password validation
-* Automatic account-number generation (`1000+`)
-* MySQL data persistence
-* Parameterized queries
+* Register / log in (SHA-256 password hashing, email + password validation)
+* Automatic account numbers starting at 1000
+* Deposit, withdraw, transfer between accounts
+* Balance, transaction history, financial summary, profile
+* Statement export to a `.txt` file
+* Two interfaces on the same code: console menu and Flutter app
 
-## Architecture
+## Files
 
-```text
-User
- │
- ├── Register ──► Validation ──► Account Creation
- │                                      │
- │                                      ▼
- │                                  MySQL DB
- │
- └── Login ────► Hash Verification ──► Session
-```
+| File | Job |
+| --- | --- |
+| `account.py` | `Account` class: registration, login, profile; creates the database and tables |
+| `database.py` | All MySQL queries (balance, transactions, account lookup); holds the DB login |
+| `transactions.py` | Deposit, withdraw, transfer, history and summary rules |
+| `main.py` | Console menu |
+| `api.py` | FastAPI web API used by the Flutter app |
+| `bank_app/` | Flutter front end |
+| `datatbase.sql` | Optional manual schema (Python also creates the tables itself) |
+| `docs/CODE_WALKTHROUGH.md` | Explanation of every part + demo script |
 
-## Database
-
-The application automatically creates `banking_db` and the `accounts` table.
-
-| Column           | Type          | Description           |
-| ---------------- | ------------- | --------------------- |
-| `id`             | INT           | Primary key           |
-| `username`       | VARCHAR(50)   | Unique username       |
-| `name`           | VARCHAR(100)  | Account holder        |
-| `email`          | VARCHAR(100)  | Email address         |
-| `password_hash`  | VARCHAR(256)  | SHA-256 password hash |
-| `account_number` | INT           | Unique account number |
-| `balance`        | DECIMAL(12,2) | Account balance       |
-| `created_at`     | TIMESTAMP     | Creation time         |
-
-## Setup
-
-### 1. Create a virtual environment
+## 1. Set up the Python side
 
 ```bash
 python -m venv venv
-source venv/bin/activate
+source venv/bin/activate          # Windows: venv\Scripts\activate
+pip install -r requirements.txt
 ```
 
-Windows:
-
-```powershell
-venv\Scripts\activate
-```
-
-### 2. Install dependencies
-
-```bash
-pip install mysql-connector-python
-```
-
-### 3. Configure MySQL
-
-Create a MySQL user:
+Create the MySQL user once:
 
 ```sql
-CREATE USER IF NOT EXISTS 'bankuser'@'localhost'
-IDENTIFIED BY 'bankpassword123';
-
+CREATE USER IF NOT EXISTS 'bankuser'@'localhost' IDENTIFIED BY 'bankpassword123';
 GRANT ALL PRIVILEGES ON *.* TO 'bankuser'@'localhost';
-
 FLUSH PRIVILEGES;
 ```
 
-Update `DB_CONFIG` in `account.py`:
+The login lives in `DB_CONFIG` in `database.py` (or set the `BANK_DB_HOST`, `BANK_DB_USER`,
+`BANK_DB_PASSWORD` environment variables). The database and both tables are created automatically.
 
-```python
-DB_CONFIG = {
-    "host": "localhost",
-    "user": "bankuser",
-    "password": "bankpassword123",
-}
-```
-
-## Run
+### Run the console version
 
 ```bash
-python account.py
+python main.py
 ```
 
-## Usage
+### Run the API (needed for the Flutter app)
 
-```python
-from account import Account
-
-bank = Account()
-
-bank.newuser()
-
-if bank.login():
-    print(f"Active Account: {bank.get_account_number()}")
-    bank.view_profile()
-    bank.logout()
+```bash
+uvicorn api:app --reload
 ```
 
-> **Note:** This is intended as a development/academic project. Production banking systems require stronger password hashing, secret management, encryption, MFA, rate limiting, and proper transaction handling.
+Check it at <http://127.0.0.1:8000/docs> (interactive page listing every endpoint).
 
+## 2. Run the Flutter app
+
+Needs the [Flutter SDK](https://docs.flutter.dev/get-started/install). Keep the API running, then:
+
+```bash
+cd bank_app
+flutter create .          # one-time: generates android/, web/, windows/ ... (keeps our lib/ and pubspec.yaml)
+flutter pub get
+flutter run -d chrome     # or: -d windows / -d linux / -d macos
+```
+
+* **Chrome / desktop:** works with no extra setup.
+* **Android emulator:** the app already uses `10.0.2.2` to reach your computer. Android blocks plain
+  `http://` by default, so add `android:usesCleartextTraffic="true"` to the `<application>` tag in
+  `bank_app/android/app/src/main/AndroidManifest.xml`.
+* **Real phone:** start the API with `uvicorn api:app --host 0.0.0.0`, then on the login screen tap
+  *Server address* and enter `http://<your-computer-IP>:8000` (same Wi-Fi).
+
+Run the Flutter unit tests with `flutter test`.
+
+## API endpoints
+
+| Method | Path | Needs login | Purpose |
+| --- | --- | --- | --- |
+| POST | `/register` | no | Create account |
+| POST | `/login` | no | Returns a token |
+| POST | `/logout` | yes | End the session |
+| GET | `/profile`, `/balance`, `/transactions`, `/summary` | yes | Read account data |
+| POST | `/deposit`, `/withdraw`, `/transfer` | yes | Move money |
+| GET | `/export` | yes | Statement as a `.txt` file |
+
+Logged-in requests send `Authorization: Bearer <token>`.
+
+> **Note:** academic project. A production bank would need salted password hashing (bcrypt/argon2),
+> database transactions around every money movement, HTTPS, token expiry and rate limiting.

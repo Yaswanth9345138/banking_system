@@ -1,13 +1,17 @@
+import os
+
 import mysql.connector
 from mysql.connector import Error
 
 
 DB_NAME = "banking_db"
 
+# Single place for the MySQL login (account.py imports it from here).
+# The defaults match the README; set BANK_DB_* environment variables to override.
 DB_CONFIG = {
-    "host": "localhost",
-    "user": "bankuser",
-    "password": "bankpassword123",
+    "host": os.environ.get("BANK_DB_HOST", "localhost"),
+    "user": os.environ.get("BANK_DB_USER", "bankuser"),
+    "password": os.environ.get("BANK_DB_PASSWORD", "bankpassword123"),
 }
 
 
@@ -202,7 +206,7 @@ def get_transactions(account_number):
             transaction_date
         FROM transactions
         WHERE account_number = %s
-        ORDER BY transaction_date DESC
+        ORDER BY transaction_date DESC, transaction_id DESC
         """
 
         cursor.execute(query, (account_number,))
